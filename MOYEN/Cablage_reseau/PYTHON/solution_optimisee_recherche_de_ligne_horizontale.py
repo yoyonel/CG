@@ -1,0 +1,80 @@
+import sys
+import math
+
+# Auto-generated code below aims at helping you parse
+# the standard input according to the problem statement.
+
+n = int(raw_input())
+list_xy = []
+for i in xrange(n):
+    x, y = [int(j) for j in raw_input().split()]
+    # list des coordonnees des maisons
+    list_xy.append((x, y))
+
+# si il y a plus d'une maison a relie
+if len(list_xy) > 1:
+    # on trie les coordonnees selon x (pour avoir une liste de gauche a droite de maison)
+    list_xy.sort(key=lambda x:x[0])
+    
+    #print >> sys.stderr, "list_xy:", list_xy
+    
+    # on recupere la liste des coordonnees y des maisons
+    list_y = [y for x,y in list_xy]
+    
+    # on calcul l'ordonnee moyenne des maisons
+    # ca sera le point de depart pour la recherche de l'ordonnee du cable
+    avg_y = sum(list_y)//len(list_y)
+    #print >> sys.stderr, "avg_y: ", avg_y
+    
+    # on identifie les maisons avec une ordonnee au dessous, en dessous et sur la ligne horizontale moyenne
+    list_y_great_avg = [y for y in list_y if y > avg_y]
+    list_y_less_avg = [y for y in list_y if y < avg_y]
+    list_y_equal_avg = [y for y in list_y if y == avg_y]
+    # on compte le nombre de maisons dans chacun des groupes (>,<,==)
+    nb_y_greater_avg = len(list_y_great_avg)
+    nb_y_lower_avg = len(list_y_less_avg)
+    nb_y_equal_avg = len(list_y_equal_avg)
+    #
+    #print >> sys.stderr, "list_y_great_avg: ", list_y_great_avg, ', # = ', nb_y_greater_avg
+    #print >> sys.stderr, "list_y_less_avg: ", list_y_less_avg, ', # = ', nb_y_lower_avg
+    #print >> sys.stderr, "list_y_equal_avg: ", list_y_equal_avg, ', # = ', nb_y_equal_avg
+    # ordonnee actuelle du cable (horizontal)
+    y_cable = avg_y
+    # Question: Est ce que ca vaut le coup de monter/descendre ce cable horizontal (moyen)
+    # Pour y repondre on doit prendre en compte les nombres de maisons 'au dessus'/'en dessous'/'sur' ce cable horizontal.
+    #
+    # Si le nombre de maison au dessus de la ligne horizontale dy cable
+    # est superieur au nombre de maison en dessous plus le nombre de maison dessus
+    if nb_y_greater_avg > (nb_y_lower_avg+nb_y_equal_avg):
+        # alors on peut deplacer l'ordonnee de la ligne horizontale du cable plus haut
+        # on calcul la difference entre les nombres de maisons au dessus et en dessous+sur
+        diff = nb_y_greater_avg - (nb_y_lower_avg+nb_y_equal_avg)
+        # on tri la liste des maisons au dessus de la ligne horizontale du cable
+        list_y_great_avg.sort()
+        # On recupere l'ordonnee de la (diff-1)eme maison la plus proche de la ligne horizontale du cable
+        # (en etant dans le groupe des maisons au dessus)
+        y_cable = list_y_great_avg[diff-1]
+    # Si le nombre de maison au dessus de la ligne horizontale du cable
+    # est superieur au nombre de maison en dessous plus le nombre de maison dessus
+    elif nb_y_lower_avg > (nb_y_greater_avg+nb_y_equal_avg):
+        # meme logique/calcul du bloc d'au dessus
+        diff = nb_y_lower_avg - (nb_y_greater_avg+nb_y_equal_avg)
+        # on reverse la liste pour indexer sur un ordre de proximite de la ligne horizontale du cable
+        list_y_less_avg.sort(reverse=True)
+        # On recupere l'ordonnee de la (diff-1)eme maison la plus proche de la ligne horizontale du cable
+        # (en etant dans le groupe des maisons au dessous)
+        y_cable = list_y_less_avg[diff-1]
+    # else: on ne change rien, la solution est correcte
+    
+    #print >> sys.stderr, "y_cable: ", y_cable
+    
+    # L'ordonnee de la ligne horizontale du cable est y_cable
+    # on calcul la somme des distances (ordonnees) des maisons au cable
+    sum_diff_y_avg = sum([abs(y_cable-y) for y in list_y])
+    # la longueur min du cable est la somme precedemment calculee 
+    # plus la longueur du cable horizontale (diff max/min ordonnees)
+    min_length_cable = sum_diff_y_avg + (list_xy[-1][0] - list_xy[0][0])  # list_xy est triee selon x -> max=[-1] min=[0]
+    
+    print min_length_cable
+else:
+    print "0"

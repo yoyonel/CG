@@ -1,0 +1,39 @@
+import sys
+import math
+import itertools
+
+# Auto-generated code below aims at helping you parse
+# the standard input according to the problem statement.
+
+n = int(raw_input())
+list_telephones = []
+for i in xrange(n):
+    telephone = raw_input()
+    #
+    list_telephones.append(telephone)
+
+# on trie la liste des numeros de telephones    
+list_telephones.sort()
+
+list_groups_telephones = [list_telephones]
+nb_elems = 0
+i = 0
+while(list_groups_telephones):
+    next_list_groups_telephones = []
+    for list_telephones in list_groups_telephones:
+        for key, igroup in itertools.groupby(list_telephones, lambda x: x[i]):
+            lgroup = list(igroup)
+            if len(lgroup) > 1:
+                next_lgroup = filter(lambda x: len(x) > i+1, lgroup)
+                next_list_groups_telephones.append(next_lgroup)
+                nb_elems += 1
+            else:
+                nb_elems += len(lgroup[0][i:])
+    #
+    list_groups_telephones = next_list_groups_telephones
+    #
+    i += 1
+
+# The number of elements (referencing a number) stored in the structure.
+print nb_elems
+
