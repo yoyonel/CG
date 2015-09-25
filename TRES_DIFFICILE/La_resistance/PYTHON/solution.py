@@ -3,7 +3,52 @@ __author__ = 'latty'
 import sys
 import math
 
-CODE = {
+import bisect
+import resource
+
+
+def using(point=""):
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    return '''%s: usertime=%s systime=%s mem=%s mb
+           ''' % (point, usage[0], usage[1],
+                  (usage[2] * resource.getpagesize()) / 1000000.0)
+
+
+# url:
+# http://stackoverflow.com/questions/7380629/perform-a-binary-search-for-a-string-prefix-in-python
+class PrefixCompares(object):
+
+    def __init__(self, value=None):
+        self.value = value
+
+    def __lt__(self, other):
+        return self.value < other[0:len(self.value)]
+
+    def __gt__(self, other):
+        return self.value[0:len(self.value)] > other
+
+# url:
+# stackoverflow.com/questions/7380629/perform-a-binary-search-for-a-string-prefix-in-python
+
+
+def bisect_right_prefix(a, x, lo=0, hi=None):
+    if lo < 0:
+        raise ValueError('lo must be non-negative')
+    if hi is None:
+        hi = len(a)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if x < a[mid] and not a[mid].startswith(x):
+            hi = mid
+        else:
+            lo = mid + 1
+    return lo
+
+# Auto-generated code below aims at helping you parse
+# the standard input according to the problem statement.
+
+# dictionnaire de conversion ASCII -> MORSE
+ascii_morse_mapping = {
     'A': '.-', 'B': '-...', 'C': '-.-.',
     'D': '-..', 'E': '.', 'F': '..-.',
     'G': '--.', 'H': '....', 'I': '..',
@@ -15,71 +60,103 @@ CODE = {
     'Y': '-.--', 'Z': '--..'
 }
 
-# Auto-generated code below aims at helping you parse
-# the standard input according to the problem statement.
-
-l = raw_input()
+seq = raw_input()
 
 n = int(raw_input())
 list_w = []
 for i in xrange(n):
     w = raw_input()
     #
-    list_w.append(''.join([CODE[char] for char in w]))
+    list_w.append(''.join([ascii_morse_mapping[char] for char in w]))
 
+# tri de la liste des mots pour utilisation (future) du module bisect
 list_w.sort()
-print >> sys.stderr, "list_w: ", list_w
-print >> sys.stderr, "l:", l
-nb_w_found = 0
-offset = 0
-list_results = []
-list_search_w = [(0, 0, list_w, 0)]
-while list_search_w:
-    #print >> sys.stderr, "list_search_w:", list_search_w
-    #
-    new_list_search_w = []
-    for offset_l, offset_w, list_rest_w, nb_w_found in list_search_w:
-        #print >> sys.stderr, "offset_l, offset_w, list_rest_w, nb_w_found:",offset_l, offset_w, list_rest_w, nb_w_found
-        char = l[offset_l]
-        list_w_for_char = filter(lambda x: x[offset_w] == char, list_rest_w)
-        #print >> sys.stderr, "list_w_for_char :", list_w_for_char
+
+min_size = len(min(list_w, key=lambda w: len(w)))
+max_size = len(max(list_w, key=lambda w: len(w)))
+
+possibilities_memory = {}
+
+
+def recursive_solve(sequence, list_words):
+
+    def possibilities(beg, end):
+        seq = sequence[beg:end]
         #
+        if len(seq) == 0:
+            return 1
+
+        tuple_seq = (beg, end)
+        if tuple_seq in possibilities_memory:
+            return possibilities_memory[tuple_seq]
+
+        total = 0
         #
-        list_w_ending = filter(lambda x: len(x) == (offset_w+1), list_w_for_char)
-        #print >> sys.stderr, "offset_w:", offset_w
-        #print >> sys.stderr, "list_w_for_char:", list_w_for_char
-        #print >> sys.stderr, "list_w_ending:", list_w_ending
-        for w in list_w_ending:
-            new_offset_l = offset_l + 1
-            if new_offset_l < len(l):
-                new_list_search_w.append(
-                    (
-                        offset_l + 1,
-                        0,
-                        list_w,
-                        nb_w_found + 1
+        min_for_seq = min_size
+        max_for_seq = min(max_size, len(seq))
+        for size_prefix in range(min_for_seq, max_for_seq + 1):
+            prefix = seq[:size_prefix]
+            leftIndex = bisect.bisect_left(list_words, prefix)
+            rightIndex = bisect_right_prefix(list_words, prefix)
+            count = len(
+                filter(
+                    lambda w: len(w) == len(prefix),
+                    list_words[leftIndex:rightIndex]
                     )
                 )
+            if count > 0:
+                total += count * possibilities(beg + size_prefix, end)
+        #
+        possibilities_memory[tuple_seq] = total
+
+        return total
+
+    return possibilities(0, len(sequence))
+
+'''
+def iter_solve(seq, list_words):
+    #print >> sys.stderr, "seq: ", seq
+    #print >> sys.stderr, "list_words: ", list_words
+    #
+    possibilities_memory = {}
+    #
+    total = 0
+    #
+    min_size = len(min(list_words, key=lambda w: len(w)))
+    max_size = len(max(list_words, key=lambda w: len(w)))
+    min_for_seq = min_size
+    #
+    key = PrefixCompares()
+    begin = 0
+    end = len(seq)
+    list_seqs_to_test = [(seq, '', 0)]
+    while list_seqs_to_test:
+        print >> sys.stderr, "-> ", len(list_seqs_to_test)
+        cur_seq, cur_path, cur_total = list_seqs_to_test.pop(0)
+        if len(cur_seq) == 0:
+            possibilities_memory[cur_path] = cur_total + 1
+            total += cur_total + 1
+        else:
+            if cur_seq in possibilities_memory:
+                possibilities_memory[cur_path + cur_seq] = cur_total
+                total += cur_total + possibilities_memory[cur_path]
             else:
-                list_results.append(nb_w_found+1)
-                print >> sys.stderr, "**** list_results:", list_results
+                max_for_seq = min(max_size, len(cur_seq))
+                for size_prefix in range(min_for_seq, max_for_seq + 1):
+                    prefix = cur_seq[:size_prefix]
+                    #print >> sys.stderr, "prefix: ", prefix
+                    key.value = prefix
+                    leftIndex = bisect.bisect_left(list_words, key)
+                    rightIndex = bisect.bisect_right(list_words, key)
+                    count = len(
+                        filter(lambda w: w == prefix, list_words[leftIndex:rightIndex]))
+                    #print >> sys.stderr, "count: ", count
+                    if count > 0:
+                        #print >> sys.stderr, "-> ", (cur_seq[size_prefix:], cur_path + prefix, count + cur_total)
+                        list_seqs_to_test.append(
+                            (cur_seq[size_prefix:], cur_path + prefix, cur_total))
+    return total
+'''
 
-        list_w_not_ending = filter(lambda x: len(x) != (offset_w+1), list_w_for_char)
-        new_offset_l = offset_l + 1
-        if new_offset_l < len(l):
-            new_list_search_w.append(
-                (
-                    offset_l + 1,
-                    offset_w + 1,
-                    list_w_not_ending,
-                    nb_w_found
-                )
-            )
-    list_search_w = new_list_search_w
-
-#print >> sys.stderr, "list_results:", list_results
-
-# Write an action using print
-# To debug: print >> sys.stderr, "Debug messages..."
-
-print max(list_results)
+# print iter_solve(seq, list_w)
+print recursive_solve(seq, list_w)
