@@ -4,14 +4,6 @@ import sys
 import math
 
 import bisect
-import resource
-
-
-def using(point=""):
-    usage = resource.getrusage(resource.RUSAGE_SELF)
-    return '''%s: usertime=%s systime=%s mem=%s mb
-           ''' % (point, usage[0], usage[1],
-                  (usage[2] * resource.getpagesize()) / 1000000.0)
 
 
 # url:
@@ -29,8 +21,6 @@ class PrefixCompares(object):
 
 # url:
 # stackoverflow.com/questions/7380629/perform-a-binary-search-for-a-string-prefix-in-python
-
-
 def bisect_right_prefix(a, x, lo=0, hi=None):
     if lo < 0:
         raise ValueError('lo must be non-negative')
@@ -72,13 +62,11 @@ for i in xrange(n):
 # tri de la liste des mots pour utilisation (future) du module bisect
 list_w.sort()
 
-min_size = len(min(list_w, key=lambda w: len(w)))
-max_size = len(max(list_w, key=lambda w: len(w)))
-
-possibilities_memory = {}
-
 
 def recursive_solve(sequence, list_words):
+    ''' '''
+    possibilities_memory = {}
+    set_size = set([len(w) for w in list_words])
 
     def possibilities(beg, end):
         seq = sequence[beg:end]
@@ -92,15 +80,13 @@ def recursive_solve(sequence, list_words):
 
         total = 0
         #
-        min_for_seq = min_size
-        max_for_seq = min(max_size, len(seq))
-        for size_prefix in range(min_for_seq, max_for_seq + 1):
+        for size_prefix in filter(lambda x: x <= len(seq), set_size):
             prefix = seq[:size_prefix]
             leftIndex = bisect.bisect_left(list_words, prefix)
             rightIndex = bisect_right_prefix(list_words, prefix)
             count = len(
                 filter(
-                    lambda w: len(w) == len(prefix),
+                    lambda w: len(w) == size_prefix,
                     list_words[leftIndex:rightIndex]
                     )
                 )
