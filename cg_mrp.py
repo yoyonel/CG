@@ -3,6 +3,122 @@ import math
 import random
 
 
+# url: http://stackoverflow.com/questions/18516299/finding-a-list-of-all-largest-open-rectangles-in-a-grid-by-only-examining-a-list
+class Range:
+    def __init__(self, start, end=None):
+        self.start = start
+        self.end = end if end is not None else start
+
+    def isEmpty(self):
+        return self.start > self.end
+
+    def isUnit(self):
+        return self.start == self.end
+
+    def intersect(self, other):
+        return Range(max(self.start, other.start), min(self.end, other.end))
+
+    def contains(self, other):
+        return self.start <= other.start and self.end >= other.end
+
+    def len(self):
+        """ """
+        return self.end - self.start
+
+    def center(self):
+        """ """
+        return (self.end + self.start)//2
+
+    def __repr__(self):
+        return "Range(%d,%d)" % (self.start, self.end)
+
+
+class Rect:
+    def __init__(self, _xRange, _yRange):
+        self.xRange = _xRange
+        self.yRange = _yRange
+
+    def isEmpty(self):
+        return self.xRange.isEmpty() or self.yRange.isEmpty()
+
+    def isUnit(self):
+        return self.xRange.isUnit() and self.yRange.isUnit()
+
+    #def intersect(self, other):
+    #    return Range(max(self.start, other.start), min(self.end, other.end))
+
+    def contains(self, other):
+        return self.xRange.contains(other.xRange) and self.yRange.contains(other.yRange)
+
+    def area(self):
+        """ """
+        return self.xRange.len() * self.yRange.len()
+
+    def center(self):
+        """ """
+        return self.xRange.center(), self.yRange.center()
+
+    def __repr__(self):
+        return "Rect(%s,%s)" % (self.xRange, self.yRange)
+
+
+def intersect(a, b):
+    r = Rect(Range(b.xRange.start, a.xRange.end), a.yRange.intersect(b.yRange))
+    brokenB = not a.yRange.contains(b.yRange)
+    fullyAbsorbedA = b.yRange.contains(a.yRange)
+    return r, brokenB, fullyAbsorbedA
+
+
+def findOpenRectangles(freeElements, pastRowNum):
+    # From `freeElements`, compute free runs into `freeRunsPerRow`
+    from collections import defaultdict
+
+    freeRunsPerRow = defaultdict(set)
+    rowNum = -1
+    currRun = None
+    for fe in freeElements:
+        if fe[0] != rowNum:
+            if currRun is not None:
+                freeRunsPerRow[rowNum] |= {Rect(Range(rowNum), currRun)}
+            currRun = Range(fe[1], fe[1])
+            rowNum = fe[0]
+        elif fe[1] == currRun.end + 1:
+            currRun = Range(currRun.start, fe[1])
+        else:
+            freeRunsPerRow[rowNum] |= {Rect(Range(rowNum), currRun)}
+            currRun = Range(fe[1], fe[1])
+    if currRun is not None:
+        freeRunsPerRow[rowNum] |= {Rect(Range(rowNum), currRun)}
+        currRun = None
+    #for freeRuns in freeRunsPerRow.items():
+    #    print(freeRuns)
+
+    # Yield open rectangles
+    currRects = set()
+    for currRow in range(0, pastRowNum):
+        continuingRects = set()
+        startingRects = set(freeRunsPerRow[currRow])
+        for b in currRects:
+            brokenB = True
+            for a in freeRunsPerRow[currRow]:
+                modifiedContinuingRect, t_brokenB, t_absorbedA = intersect(a, b)
+                if not modifiedContinuingRect.isEmpty() and not [x for x in continuingRects if
+                                                                 x.contains(modifiedContinuingRect)]:
+                    continuingRects -= {x for x in continuingRects if modifiedContinuingRect.contains(x)}
+                    continuingRects |= {modifiedContinuingRect}
+                if not t_brokenB:
+                    brokenB = False
+                if t_absorbedA:
+                    startingRects -= {a}
+            if brokenB and not b.isUnit():
+                yield b
+        currRects = continuingRects
+        currRects |= startingRects
+    for b in currRects:
+        if not b.isUnit():
+            yield b
+
+
 class Enum(set):
     def __getattr__(self, name):
         if name in self:
@@ -113,14 +229,30 @@ class Board:
         """ """
         return filter(lambda cell: self.is_cell_close_to_id(cell, _id), self.get_cells_available())
 
+    def get_cells(self):
+        return [
+            (colNum, rowNum)
+            for rowNum, row in enumerate(self.board)
+            for colNum, element in enumerate(row)
+        ]
+
+    def get_cells_filtered(self, _filter):
+        """ """
+        return filter(_filter, self.get_cells())
+
+    def get_cells_possessed_by_id(self, _id):
+        """ """
+        return self.get_cells_filtered(lambda pos: self.board[pos[1]][pos[0]] == _id)
+
     def get_cells_available(self):
         """ """
-        return [
-            (pos_x, pos_y)
-            for pos_y in xrange(self.h)
-            for pos_x in xrange(self.l)
-            if self.cell_available((pos_x, pos_y))
-        ]
+        return self.get_cells_possessed_by_id('.')
+
+    def get_cells_available_or_possessed_by_id(self, _id):
+        """ """
+        return self.get_cells_filtered(
+            lambda pos: (self.board[pos[1]][pos[0]] == _id) | (self.board[pos[1]][pos[0]] == '.')
+        )
 
     def random_position_available(self):
         """ """
@@ -131,6 +263,7 @@ class Board:
     def connectivity_to_id(self, _pos, _id):
         """ """
         return len(self.cells_close_to_id(_pos, _id))
+
 
 class Player:
     """ """
@@ -254,36 +387,18 @@ class GameStrategy(GameState):
 
     def select_a_new_destination(self):
         """ """
-        # choix 'aleatoire' dans la liste des cellules disponibles
-        #self.destination = self.board.random_position_available()
-
-        # cases libres voisines d'une de nos cases prises
-        cells_available_close_to_me = self.board.get_cells_available_close_to_id('0')
-        if cells_available_close_to_me:
-            #print >> sys.stderr, "cells_available_close_to_me: ", cells_available_close_to_me
-            
-            # distance maximale de la position courante
-            '''
-            self.destination = max(
-                cells_available_close_to_me,
-                key=lambda cell: self.board.distance(self.me.position, cell)
-            )
-            '''
-
-            cells_available_close_to_me_connectivity = zip(
-                cells_available_close_to_me,
-                map(lambda cell: self.board.connectivity_to_id(cell, '0'), cells_available_close_to_me)
-            )
-
-            tup_min_connectivity = min(
-                cells_available_close_to_me_connectivity,
-                key=lambda tup: tup[1]
-            )
-            print >> sys.stderr, "tup_min_connectivity: ", tup_min_connectivity
-
-            self.destination = tup_min_connectivity[0]
-        else:
-            self.destination = self.board.random_position_available()
+        # Translates input into a list of coordinates of free elements
+        freeElements = [(pos[1], pos[0]) for pos in self.board.get_cells_available()]
+        #freeElements = self.board.get_cells_available_or_possessed_by_id('0')
+        # Find and print open rectangles
+        openRects = findOpenRectangles(freeElements, self.board.h)
+        #for openRect in openRects:
+        #    print >> sys.stderr, openRect
+        rect_with_max_area = max(openRects, key=lambda rect: rect.area())
+        center_rect_with_max_area = rect_with_max_area.center()
+        print >> sys.stderr, "center_rect_with_max_area: ", center_rect_with_max_area
+        
+        self.destination = (center_rect_with_max_area[1], center_rect_with_max_area[0])
 
         return self.destination
 
