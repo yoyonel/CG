@@ -1,6 +1,6 @@
 import sys
 import math
-
+import random
 
 class Enum(set):
     def __getattr__(self, name):
@@ -33,6 +33,8 @@ class Border:
 
 class Board:
     """ """
+    cardinals = [(-1, 0), (+1, 0), (0, -1), (0, +1)]
+    
     def __init__(self, _l=35, _h=20):
         """ """
         self.l = _l
@@ -63,7 +65,12 @@ class Board:
         """ """
         l_pos = [_pos]*4
         proj_to_borders = self.projections_to_borders(_pos)
-        return zip(map(lambda tup: self.distance(tup[0], tup[1]), zip(proj_to_borders, l_pos)), proj_to_borders)
+        return zip(
+            map(lambda tup: self.distance(tup[0], tup[1]), 
+                zip(proj_to_borders, l_pos)
+                ),
+            proj_to_borders
+            )
 
     def get_border_from_direction(self, _str_direction):
         """ """
@@ -73,9 +80,32 @@ class Board:
             return Border(self.h-1, Border.Type.HORIZONTAL)
         elif _str_direction == 'WEST':
             return Border(0, Border.Type.VERTICAL)
-        else:
+        else: # 'EAST'
             return Border(self.l-1, Border.Type.VERTICAL)
 
+    def cell_available(self, _pos):
+        """ """
+        return self.board[_pos[1]][_pos[0]] == '.'
+        
+    def on_board(self, _pos):
+        """ """
+        return (0 <= _pos[0] <= (self.l-1)) & (0 <= _pos[1] <= (self.h-1))
+        
+    def get_neighboors(self, _pos):
+        """ """
+        return filter(self.on_board, [(_pos[0]+card[0], _pos[1]+card[1]) for card in self.cardinals])
+        
+    def random_position_available(self):
+        """ """
+        # list des positions disponibles
+        positions_availables = [
+            (x, y)
+            for y in xrange(self.h) 
+            for x in xrange(self.l)
+            if self.cell_available((x, y))
+        ]
+        return positions_availables[int(random.random()*(len(positions_availables)-1))]
+        
 
 class Player:
     """ """
@@ -146,10 +176,16 @@ class GameState(object):
         self.board.update(_i_line, _line)
 
 
+class Target:
+    """ """
+    def __init__(self, _position):
+        """ """
+        self.position = _position
+
+
 class GameStrategy(GameState):
     """
     """
-
     CycleDirections = ['NORTH', 'WEST', 'SOUTH', 'EAST']
 
     def __init__(self, *args):
@@ -161,42 +197,6 @@ class GameStrategy(GameState):
         self.state = 0
         #
         self.indice_cycle_direction = 0
-        self.borders_to_reach = []
-
-    def next_move(self):
-        """ """
-        next_destination = [0, 0]
-
-        if self.state == 0:
-            # 1er tour => init
-            self.compute_borders()
-            next_destination = self.compute_destination()
-            self.destination = next_destination
-            self.state = 1
-        elif self.state == 1:
-            pos = self.me.position
-            if pos == self.destination:
-                self.compute_borders_from_center()
-                next_destination = self.compute_destination()
-                self.destination = next_destination
-                self.state = 2
-            else:
-                next_destination = self.compute_destination()
-
-        return self.format_output(next_destination)
-
-    def get_border_from_rotation_cycle(self):
-        """
-        :return:
-        """
-        return self.board.get_border_from_direction(self.CycleDirections[self.indice_cycle_direction])
-
-    def next_rotation_cycle(self):
-        """
-        :return:
-        """
-        self.indice_cycle_direction = (self.indice_cycle_direction+1) % 4
-        return self.indice_cycle_direction
 
     @staticmethod
     def format_output(_destination):
@@ -204,55 +204,40 @@ class GameStrategy(GameState):
         :return:
         """
         return "%d %d" % (_destination[0], _destination[1])
+        
+    def next_move(self):
+        """ """
+        pos = self.me.position
+        next_position = pos
+        if pos != self.destination:
+            next_position = self.compute_next_position()
+            if not self.board.cell_available(next_position):
+                # prochaine cellule deja prise
+                neighboors = self.board.get_neighboors(pos)
+                if neighboors:
+                    distances_neighboors_to_destination = map(
+                        lambda neighboor: self.board.distance(neighboor, self.destination), 
+                        neighboors
+                        )
+                    next_position = min(
+                        zip(distances_neighboors_to_destination, neighboors),
+                        key=lambda tup: tup[0]
+                        )[1]
+        else:
+            self.destination = self.board.random_position_available()
+                        
+        return self.format_output(next_position)
 
-    def compute_borders_from_center(self):
-        """
-        :param _obj_pos:
-        """
-        pos = self.board.center
-        #
-        self.borders_to_reach.append(self.get_border_from_rotation_cycle())
-        self.next_rotation_cycle()
-        self.borders_to_reach.append(self.get_border_from_rotation_cycle())
-        self.next_rotation_cycle()
-        self.borders_to_reach.append(Border(pos[0], Border.Type.HORIZONTAL))
-        self.borders_to_reach.append(Border(pos[1], Border.Type.VERTICAL))
-        print >> sys.stderr, "self.borders_to_reach:", self.borders_to_reach
-
-    def compute_borders(self):
-        """
-         Calcul des bords au depart [INIT]
-        """
-        for _ in xrange(4):
-            self.borders_to_reach.append(self.get_border_from_rotation_cycle())
-            self.next_rotation_cycle()
-        #print >> sys.stderr, "self.borders_to_reach:", self.borders_to_reach
-
-    def compute_destination(self):
-        """
-        :param _obj_pos:
-        :return:
-        """
-        #
-        print >> sys.stderr, "self.borders_to_reach:", self.borders_to_reach
-        destination = self.me.position
-        if len(self.borders_to_reach):
-            pos = self.me.position
-            l_pos = [pos] * len(self.borders_to_reach)
-            # distance des bords (filter des distances nulles)
-            tup_distances_to_borders = zip(
-                map(lambda tup: tup[0].distance(tup[1]), zip(self.borders_to_reach, l_pos)),
-                l_pos
-            )
-            tup_distances_to_borders = filter(lambda tup: tup[0], tup_distances_to_borders)
-            # min distance to border
-            tup_min_distance_to_border = min(tup_distances_to_borders, key=lambda tup: tup[0])
-            #min_distance_to_border = tup_min_distance_to_border[0]
-            destination = tup_min_distance_to_border[1]
-
-            print >> sys.stderr, "destination:", destination
-
-        return destination
+    def compute_next_position(self):
+        """ """
+        pos = self.me.position
+        dst = self.destination
+        
+        if pos[0] != dst[0]:
+            return (pos[0] + (1 if pos[0] < dst[0] else -1), pos[1])
+        else:
+            return (pos[0], pos[1] + (1 if pos[1] < dst[1] else -1))
+            
 
 # Auto-generated code below aims at helping you parse
 # the standard input according to the problem statement.
