@@ -1,6 +1,6 @@
 import sys
 from collections import defaultdict
-import random   # url: https://docs.python.org/2/library/random.html#module-random
+import random  # url: https://docs.python.org/2/library/random.html#module-random
 import heapq
 import math
 import operator
@@ -300,7 +300,7 @@ class Rect:
         return self.xRange.isUnit() and self.yRange.isUnit()
 
     # def intersect(self, other):
-    #    return Range(max(self.start, other.start), min(self.end, other.end))
+    # return Range(max(self.start, other.start), min(self.end, other.end))
 
     def contains(self, other):
         return self.xRange.contains(other.xRange) and self.yRange.contains(other.yRange)
@@ -319,10 +319,17 @@ class Rect:
 
     def isOnBorder(self, pos):
         """ """
-        return (pos[0] == self.xRange.start) | \
-               (pos[0] == self.xRange.end) | \
-               (pos[1] == self.yRange.start) | \
-               (pos[1] == self.yRange.end)
+        return self.isInside(pos) & (
+            (pos[0] == self.xRange.start) |
+            (pos[0] == self.xRange.end) |
+            (pos[1] == self.yRange.start) |
+            (pos[1] == self.yRange.end)
+        )
+
+    def isCloseToBorder(self, pos):
+        """ """
+        return self.isOnBorder((pos[0] - 1, pos[1])) | self.isOnBorder((pos[0] + 1, pos[1])) | self.isOnBorder(
+            (pos[0], pos[1] - 1)) | self.isOnBorder((pos[0], pos[1] + 1))
 
     def minX(self):
         """ """
@@ -392,7 +399,7 @@ def findOpenRectangles(freeElements, pastRowNum):
         freeRunsPerRow[rowNum] |= {Rect(Range(rowNum), currRun)}
         currRun = None
     # for freeRuns in freeRunsPerRow.items():
-    #    print(freeRuns)
+    # print(freeRuns)
 
     # Yield open rectangles
     currRects = set()
@@ -574,44 +581,46 @@ class Board(object):
         """ """
         return self.get_neighboors_available(a)
 
-    def compute_nearest_position_on_border_for_rect(self, _pos, _rect):
+    @staticmethod
+    def compute_nearest_position_on_border_for_rect(_pos, _rect):
         """ """
         _pos = _pos[::-1]
-        relativ_pos = _rect.coordinate(_pos)
-        #print >> sys.stderr, "_pos: ", _pos
-        #print >> sys.stderr, "relativ_pos: ", relativ_pos
+        # relativ_pos = _rect.coordinate(_pos)
+        print >> sys.stderr, "_pos: ", _pos
+        # print >> sys.stderr, "relativ_pos: ", relativ_pos
+        print >> sys.stderr, "rec: ", _rect
         if _rect.isInside(_pos):
             pos_on_border = _rect.toWorld(
                 min(
                     (
-                        (relativ_pos[0], (_rect.minX(), _pos[1])),
-                        (_rect.maxX() - relativ_pos[0], (_rect.maxX(), _pos[1])),
-                        (relativ_pos[1], (_pos[0], _rect.minY())),
-                        (_rect.maxY() - relativ_pos[1], (_pos[1], _rect.maxY()))
+                        (_pos[0] - _rect.minX(), (_rect.minX(), _pos[1])),
+                        (_rect.maxX() - _pos[0], (_rect.maxX(), _pos[1])),
+                        (_pos[1] - _rect.minY(), (_pos[0], _rect.minY())),
+                        (_rect.maxY() - _pos[1], (_pos[1], _rect.maxY()))
                     ),
                     key=lambda tup: tup[0])[1]
             )
         else:
-            if relativ_pos[0] < 0:
-                if relativ_pos[1] < 0:
+            if _pos[0] < _rect.minX():
+                if _pos[1] < _rect.minY():
                     pos_on_border = (_rect.minX(), _rect.minY())
-                elif relativ_pos[1] > _rect.maxY():
+                elif _pos[1] > _rect.maxY():
                     pos_on_border = (_rect.minX(), _rect.maxY())
                 else:
                     pos_on_border = (_rect.minX(), _pos[1])
-            elif relativ_pos[0] > _rect.maxX():
-                if relativ_pos[1] < 0:
+            elif _pos[0] > _rect.maxX():
+                if _pos[1] < _rect.minY():
                     pos_on_border = (_rect.maxX(), _rect.minY())
-                elif relativ_pos[1] > _rect.maxY():
+                elif _pos[1] > _rect.maxY():
                     pos_on_border = (_rect.maxX(), _rect.maxY())
                 else:
                     pos_on_border = (_rect.maxX(), _pos[1])
             else:
-                if relativ_pos[1] < 0:
+                if _pos[1] < _rect.minY():
                     pos_on_border = (_pos[0], _rect.minY())
                 else:
                     pos_on_border = (_pos[0], _rect.maxY())
-
+        print >> sys.stderr, "pos_on_border[::-1]", pos_on_border[::-1]
         return pos_on_border[::-1]
 
 
@@ -633,6 +642,7 @@ def heuristic(a, b):
     (x1, y1) = a
     (x2, y2) = b
     return abs(x1 - x2) + abs(y1 - y2)
+
 
 # url: http://www.redblobgames.com/pathfinding/a-star/implementation.html
 def a_star_search(graph, start, goal):
@@ -849,6 +859,8 @@ class GameStrategy(GameState):
         self.state = 0
         #
         self.indice_cycle_direction = 0
+        #
+        self.last_position = self.me.position
 
     @staticmethod
     def format_output(_destination):
@@ -872,43 +884,109 @@ class GameStrategy(GameState):
                 next_position = self.next_move()
             else:
                 next_position = self.compute_next_position()
+                if not (self.board.cell_available(next_position) | self.board.cell_available(self.destination)):
+                    self.select_a_new_destination()
+                    next_position = self.next_move()
+                '''
                 if not self.board.cell_available(next_position):
                     # prochaine cellule deja prise
                     neighboors = self.board.get_neighboors_available(pos)
                     # print >> sys.stderr, "neighboors: ", neighboors
                     if neighboors:
-                        distances_neighboors_to_destination = map(
-                            lambda neighboor: self.board.distance(neighboor, self.destination),
-                            neighboors
-                        )
                         next_position = min(
-                            zip(distances_neighboors_to_destination, neighboors),
-                            key=lambda tup: tup[0]
-                        )[1]
+                            neighboors,
+                            key=lambda neighbor: self.board.distance(neighbor, self.destination)
+                        )
                     elif not self.board.cell_available(self.destination):
                         self.select_a_new_destination()
                         next_position = self.next_move()
                         # sinon on continue vers la destination
+                '''
         elif self.state == 2:
             # on est arrive a la bordure, on cherche a fermer le rectangle
             rect = self.cur_rect
             # on recupere les voisins libres autour de la cellule bordure atteinte
-            neighboors_available = self.board.get_neighboors_available(pos)
             # on filtre les voisins libres pour recuperer les voisins sur la bordure du rectangle
-            neighboors_on_rect_borders = filter(lambda pos: rect.isOnBorder(pos[::-1]), neighboors_available)
+            neighboors_on_rect_borders = filter(
+                lambda neighboor: rect.isOnBorder(neighboor[::-1]),
+                self.board.get_neighboors_available(pos)
+            )
             # Est ce qu'on a acces a une bordure ?
             if neighboors_on_rect_borders:
                 print >> sys.stderr, "sur la bordure"
-                # si oui, on s'y dirige (normalement 1 disponible ... mais a verifier)
-                next_position = neighboors_on_rect_borders.pop()
+                print >> sys.stderr, "rect", rect
+                print >> sys.stderr, "len(neighboors_on_rect_borders): ", len(neighboors_on_rect_borders)
+                if len(neighboors_on_rect_borders) > 1:
+                    v2_pos = Vec2d(self.me.position)
+                    v2_last_to_current = v2_pos - Vec2d(self.last_position)
+                    next_position = max(
+                        neighboors_on_rect_borders,
+                        key=lambda neighboor: v2_last_to_current.dot(Vec2d(neighboor) - v2_pos)
+                    )
+                    print >> sys.stderr, "next_position (max dot): ", next_position
+                else:
+                    next_position = neighboors_on_rect_borders.pop()
             else:
                 print >> sys.stderr, "DECROCHAGE de la bordure"
                 # sinon on a un soucy d'accessibilite
-                # on decide d'aller chercher un nouveau rectangle libre [WIP]
+                # on est en conflit sur le zone courante
+                self.state = 3
+                next_position = self.next_move()
+        elif self.state == 3:
+            # conflit sur la zone courante
+
+            # Translates input into a list of coordinates of free elements
+            freeElements = [(pos[1], pos[0]) for pos in self.board.get_cells_available()]
+            # freeElements = self.board.get_cells_available_or_possessed_by_id('0')
+
+            # Find and print open rectangles
+            openRects = findOpenRectangles(freeElements, self.board.h)
+            for openRect in openRects:
+                print >> sys.stderr, openRect
+
+            # on determine le rectangle 'libre' d'aire max
+            openRects = filter(lambda rect: rect.isCloseToBorder(pos), openRects)
+
+            if openRects:
+                print >> sys.stderr, "*** Close to a new rects: ", openRects
+
+                # on determine le rectangle 'libre' d'aire max
+                #rect_with_max_area = max(openRects, key=lambda rect: rect.area())
+                rect_with_max_area = self.choose_rect_in_list_openRects(list(openRects))
+
+                self.cur_rect = rect_with_max_area
+                self.select_a_new_destination_from_rect(rect_with_max_area)
+                self.state = 1
+                next_position = self.next_move()
+            else:
                 self.state = 0
                 next_position = self.next_move()
 
+        self.last_position = self.me.position
         return next_position
+
+    def choose_rect_in_list_openRects(self, list_openRects):
+        """
+         WIP: il faudrait une correlation probabiliste entre la taille de la zone qu'on cherche a capturer
+         et la distance minimale pour atteindre la bordure de la zone (et commencer la capture) !
+        """
+        #
+        #list_openRects.sort(key=lambda rect: rect.area())
+        list_openRects.sort(
+            key=lambda rect: self.board.distance(
+                self.me.position,
+                self.board.compute_nearest_position_on_border_for_rect(self.me.position, rect)
+            )
+        )
+        list_openRects = list_openRects[::-1]
+        if self.opponent_count == 1:
+            min_rand, max_rand = 0.75, 1.00
+        elif self.opponent_count == 2:
+            min_rand, max_rand = 0.66, 0.90
+        else:
+            min_rand, max_rand = 0.50, 0.90
+        index_rect = int((random.random()*(max_rand-min_rand)+min_rand)*(len(list_openRects)-1))
+        return list_openRects[index_rect]
 
     def select_a_new_rect(self):
         """ """
@@ -918,25 +996,23 @@ class GameStrategy(GameState):
 
         # Find and print open rectangles
         openRects = findOpenRectangles(freeElements, self.board.h)
-        #for openRect in openRects:
-        #    print >> sys.stderr, openRect
+        # for openRect in openRects:
+        # print >> sys.stderr, openRect
 
         # on determine le rectangle 'libre' d'aire max
-        rect_with_max_area = max(openRects, key=lambda rect: rect.area())
+        #new_rect = max(openRects, key=lambda rect: rect.area())
 
-        return rect_with_max_area
+        new_rect = self.choose_rect_in_list_openRects(list(openRects))
 
-    def select_a_new_destination(self):
+        return new_rect
+
+    def select_a_new_destination_from_rect(self, _rect):
         """ """
-        #
-        rect_choosen = self.select_a_new_rect()
-        self.cur_rect = rect_choosen
-
         # on recupere le centre du rectangle d'aire max
         # center_rect_with_max_area = rect_choosen.center()
-        #print >> sys.stderr, "center_rect_with_max_area: ", center_rect_with_max_area
+        # print >> sys.stderr, "center_rect_with_max_area: ", center_rect_with_max_area
         # on choisit le centre du rectangle d'aire max comme destination
-        #self.destination = (center_rect_with_max_area[1], center_rect_with_max_area[0])
+        # self.destination = (center_rect_with_max_area[1], center_rect_with_max_area[0])
 
         # A* : Path finding
         #came_from, cost_so_far = a_star_search(self.board, self.me.position, center_rect_with_max_area)
@@ -944,12 +1020,17 @@ class GameStrategy(GameState):
         #print >> sys.stderr, "path :", path
 
         # on cherche le bord 'accessible' (le plus proche) du rectangle choisit
-        self.destination = self.board.compute_nearest_position_on_border_for_rect(self.me.position, rect_choosen)
+        self.destination = self.board.compute_nearest_position_on_border_for_rect(self.me.position, _rect)
 
-        print >> sys.stderr, "rect_choosen: ", rect_choosen
+        print >> sys.stderr, "rect_choosen: ", _rect
         print >> sys.stderr, "self.destination: ", self.destination
 
         return self.destination
+
+    def select_a_new_destination(self):
+        """ """
+        self.cur_rect = self.select_a_new_rect()
+        return self.select_a_new_destination_from_rect(self.cur_rect)
 
     def compute_next_position(self):
         """ """

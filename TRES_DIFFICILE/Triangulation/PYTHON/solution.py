@@ -8,7 +8,6 @@ import operator
 
 
 def calculateGradient(p1, p2):
-
     # Ensure that the line is not vertical
     if (p1[0] != p2[0]):
         m = (p1[1] - p2[1]) / (p1[0] - p2[0])
@@ -16,11 +15,13 @@ def calculateGradient(p1, p2):
     else:
         return None
 
+
 # Calc the point 'b' where line crosses the Y axis
 
 
 def calculateYAxisIntersect(p, m):
     return p[1] - (m * p[0])
+
 
 # Calc the point where two infinitely long lines (p1 to p2 and p3 to p4) intersect.
 # Handle parallel lines and vertical lines (the later has infinate 'm').
@@ -85,7 +86,6 @@ def liesOnSegment(a, b, c):
 
 
 class Vec2d(object):
-
     """2d vector class, supports vector and scalar operators,
        and also provides a bunch of high level functions
        url: http://www.pygame.org/wiki/2DVectorClass
@@ -163,6 +163,7 @@ class Vec2d(object):
             return Vec2d(self.x + other[0], self.y + other[1])
         else:
             return Vec2d(self.x + other, self.y + other)
+
     __radd__ = __add__
 
     def __iadd__(self, other):
@@ -214,6 +215,7 @@ class Vec2d(object):
             return Vec2d(self.x * other[0], self.y * other[1])
         else:
             return Vec2d(self.x * other, self.y * other)
+
     __rmul__ = __mul__
 
     def __imul__(self, other):
@@ -258,17 +260,17 @@ class Vec2d(object):
 
     # vectory functions
     def get_length_sqrd(self):
-        return self.x**2 + self.y**2
+        return self.x ** 2 + self.y ** 2
 
     def get_length(self):
-        return math.sqrt(self.x**2 + self.y**2)
+        return math.sqrt(self.x ** 2 + self.y ** 2)
 
     # distance (in term of minimal cell traversed) in a grid
     def get_dist_in_grid(self):
         return max(abs(self.x), abs(self.y))
 
     def get_angle(self):
-        if (self.get_length_sqrd() == 0):
+        if self.get_length_sqrd() == 0:
             return 0
         return math.degrees(math.atan2(self.y, self.x))
 
@@ -276,6 +278,7 @@ class Vec2d(object):
         self.x = self.length
         self.y = 0
         self.rotate(angle_degrees)
+
     angle = property(
         get_angle, __setangle, None, "gets or sets the angle of a vector")
 
@@ -311,7 +314,6 @@ class Vec2d(object):
 
 
 class Grid(object):
-
     """ """
 
     def __init__(self, w, h):
@@ -372,7 +374,7 @@ class Grid(object):
         # >>> grid = Grid(10.0, 10.0); grid.get_intersections_by_line(Vec2d(3.0, -2.0), Vec2d(9.0, 15.0))
         # Out[179]:
         # [(Vec2d(6.88235294118, 9.0), Vec2d(0, 9.0), Vec2d(9.0, 9.0)),
-        #  (Vec2d(3.70588235294, 0.0), Vec2d(9.0, 0), Vec2d(0, 0))
+        # (Vec2d(3.70588235294, 0.0), Vec2d(9.0, 0), Vec2d(0, 0))
 
         list_intersections = [
             getIntersectPoint(p0, p1, p2, p3) for p2, p3 in self.list_borders
@@ -403,8 +405,8 @@ class Grid(object):
         )
         self.update()
 
-class SolveBatmanProblem(Grid):
 
+class SolveBatmanProblem(Grid):
     def __init__(self, x, y, w, h):
         super(SolveBatmanProblem, self).__init__(w, h)
         self.bat_pos = Vec2d(x, y)

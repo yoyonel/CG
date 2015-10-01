@@ -8,25 +8,27 @@ class Graph(object):
 
     def neighbors(self, id):
         return self.edges[id]
-        
+
     def add_edge(self, N1, N2):
         self.edges.setdefault(N1, []).append(N2)
         self.edges.setdefault(N2, []).append(N1)
-        
+
     def del_edge(self, a, b):
         self.edges[N1].remove(N2)
         self.edges[N2].remove(N1)
+
 
 class GraphWithWeights(Graph):
     def __init__(self):
         self.weights = {}
         #
         super(GraphWithWeights, self).__init__()
-        
+
     def cost(self, a, b):
         # cout de base de deplacement egale a un tour de jeu (par defaut)
         return self.weights.get(b, 1)
-        
+
+
 class GraphForSkyNetProblem(GraphWithWeights):
     def __init__(self):
         self.connectivities = {}
@@ -34,7 +36,7 @@ class GraphForSkyNetProblem(GraphWithWeights):
         self.list_EI = []
         #
         super(GraphForSkyNetProblem, self).__init__()
-        
+
     def update(self, list_EI):
         """ 
             Mise a jour des informations:
@@ -52,21 +54,21 @@ class GraphForSkyNetProblem(GraphWithWeights):
                 # le tour de jeu est force pour empecher skynet d'atteindre la passerelle a proximite
                 # donc le cout de deplacement pour skynet est au final ~ nul
                 self.weights[b] = 0
-                
+
                 # on met a jour la valeur de connectivite a des passerelles
                 self.add_connectivity(b)
                 if self.connectivity(b) == 2:
                     self.list_nodes_c2.append(b)
-                
+
     def connectivity(self, a):
         """ connectivite vers des passerelles """
         # par defaut un noeud n'est pas relie a une passerelle
         return self.connectivities.get(a, 0)
-        
+
     def add_connectivity(self, a):
         """ Ajoute une connectivite aux passerelles au noeud a """
         self.connectivities[a] = self.connectivity(a) + 1
-        
+
     def del_connectivity(self, a):
         """ Ajoute une connectivite aux passerelles au noeud a """
         self.connectivities[a] = self.connectivity(a) - 1
@@ -92,19 +94,19 @@ class GraphForSkyNetProblem(GraphWithWeights):
             nearest_node_c2 = min(dict_nodes_c2.items(), key=lambda x: x[1])[0]
         #
         return nearest_node_c2
-        
+
     def get_gateways(self, a):
         """ Renvoie la liste des passerelles dans le voisinage du node a """
         # on effectue une intersection entre les listes:
         # - des noeuds du voisinages de a
         # - la liste des passerelles
         return set(self.edges[a]).intersection(self.list_EI)
-        
+
     def del_node_c2(self, a):
         """ On retire un node a C2 du graphe """
         # on retire le noeud a de la liste des nodes C2
         self.list_nodes_c2.remove(a)
-        
+
     def del_link_to_gateway(self, a, EI):
         """ On retire le lien d'un node a vers une passerelle EI """
         # on reduit la connectivite du node a
@@ -115,24 +117,27 @@ class GraphForSkyNetProblem(GraphWithWeights):
         if not self.edges[EI]:
             # si non accessible, on la retire de la liste des EI
             self.list_EI.remove(EI)
-        
+
+
 import collections
 import heapq
 
+
 class PriorityQueue:
     """ Wrapper sur heapq (utilisation simplifiee) """
-    
+
     def __init__(self):
         self.elements = []
-    
+
     def empty(self):
         return len(self.elements) == 0
-    
+
     def put(self, item, priority):
         heapq.heappush(self.elements, (priority, item))
-    
+
     def get(self):
         return heapq.heappop(self.elements)[1]
+
 
 def dijkstra_search(graph, start, goal):
     frontier = PriorityQueue()
@@ -141,13 +146,13 @@ def dijkstra_search(graph, start, goal):
     cost_so_far = {}
     came_from[start] = None
     cost_so_far[start] = 0
-    
+
     while not frontier.empty():
         current = frontier.get()
-        
+
         if current == goal:
             break
-        
+
         for next in graph.neighbors(current):
             new_cost = cost_so_far[current] + graph.cost(current, next)
             if next not in cost_so_far or new_cost < cost_so_far[next]:
@@ -155,8 +160,9 @@ def dijkstra_search(graph, start, goal):
                 priority = new_cost
                 frontier.put(next, priority)
                 came_from[next] = current
-    
+
     return came_from, cost_so_far
+
 
 def reconstruct_path(came_from, start, goal):
     current = goal
@@ -166,42 +172,42 @@ def reconstruct_path(came_from, start, goal):
         path.append(current)
     path.reverse()
     return path
-    
+
+
 def reconstruct_path_cost(came_from, cost_so_far, start, goal):
     current = goal
     path = [current]
     cost = cost_so_far[current]
     while current != start:
-        #print >> sys.stderr, "current: ", current
+        # print >> sys.stderr, "current: ", current
         current = came_from[current]
         path.append(current)
         cost += cost_so_far[current]
     path.reverse()
     return (path, cost)
-        
 
 
 graph_network = GraphForSkyNetProblem()
 
- # N: the total number of nodes in the level, including the gateways
- # L: the number of links
- # E: the number of exit gateways
+# N: the total number of nodes in the level, including the gateways
+# L: the number of links
+# E: the number of exit gateways
 N, L, E = [int(i) for i in raw_input().split()]
 for i in xrange(L):
-     # N1: N1 and N2 defines a link between these nodes
+    # N1: N1 and N2 defines a link between these nodes
     N1, N2 = [int(j) for j in raw_input().split()]
     #
     graph_network.add_edge(N1, N2)
 
 list_EI = []
 for i in xrange(E):
-    EI = int(raw_input()) # the index of a gateway node
+    EI = int(raw_input())  # the index of a gateway node
     #
     list_EI.append(EI)
 
 graph_network.update(list_EI)
 
-#print >> sys.stderr, "graph_network.edges: ", graph_network.edges
+# print >> sys.stderr, "graph_network.edges: ", graph_network.edges
 #print >> sys.stderr, "graph_network.weights: ", graph_network.weights
 #print >> sys.stderr, "graph_network.connectivities: ", graph_network.connectivities
 
@@ -212,8 +218,8 @@ b_still_nodes_c2 = True
 
 # game loop
 while 1:
-    SI = int(raw_input()) # The index of the node on which the Skynet agent is positioned this turn
-    
+    SI = int(raw_input())  # The index of the node on which the Skynet agent is positioned this turn
+
     # a t'on des passerelles dans le voisinage de la postion SI de skynet ?
     list_EI_close_to_SI = graph_network.get_gateways(SI)
     if list_EI_close_to_SI:
@@ -251,11 +257,11 @@ while 1:
             #
             N1 = NE_EI
             N2 = EI
-            
+
     # on retire l'edge (le lien) dans le graphe
     # N1: node
     # N2: node passerelle
     graph_network.del_link_to_gateway(N1, N2)
-    
+
     # print out the result : link to remove
     print str(N1) + " " + str(N2)
