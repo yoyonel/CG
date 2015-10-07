@@ -58,7 +58,7 @@ def getIntersectPoint(p1, p2, p3, p4):
                 x = p3[0]
                 y = (m1 * x) + b1
             else:
-                assert false
+                assert False
 
         return ((x, y),)
     else:
@@ -317,7 +317,11 @@ class Grid(object):
     """ """
 
     def __init__(self, w, h):
-        #
+        """
+        :param w:
+        :param h:
+        :return:
+        """
         self.origin = Vec2d(0, 0)
         self.dim = Vec2d(w - 1, h - 1)
         self.initial_dim = self.dim
@@ -328,54 +332,77 @@ class Grid(object):
         self.list_borders = []
         #
         self.__init_list_corners__()
-        self._update_borders_()
+        self._sorting_corners_()
         #
-        self.sorting_corners()
+        self._update_borders_()
 
     def __init_list_corners__(self):
-        #
+        """
+
+        :return:
+        """
         self.list_corners.append(self.origin)
         self.list_corners.append(self.origin + Vec2d(0, self.dim.y))
         self.list_corners.append(self.origin + Vec2d(self.dim.x, self.dim.y))
         self.list_corners.append(self.origin + Vec2d(self.dim.x, 0))
-        #
+        # on decale de (0.5, 0.5) pour placer les bords sur les centres des cases
         self.list_corners = [
             corner + Vec2d(0.5, 0.5) for corner in self.list_corners
         ]
 
-    def sorting_corners(self):
-        #
+    def _sorting_corners_(self):
+        """
+
+        :return:
+        """
         self.list_corners = sorted(
             self.list_corners,
             key=lambda corner: (corner - self.center).get_angle()
         )
 
     def _update_borders_(self):
+        """
+
+        :return:
+        """
         self.list_borders = zip(self.list_corners, self.list_corners[1:])
         self.list_borders.append((self.list_corners[-1], self.list_corners[0]))
 
-    def update_center(self):
-        #
+    def _update_center_(self):
+        """
+
+        :return:
+        """
         self.center = sum(self.list_corners) / len(self.list_corners)
 
     def update(self):
-        self.sorting_corners()
+        """
+
+        :return:
+        """
+        self._sorting_corners_()
         self._update_borders_()
-        self.update_center()
+        self._update_center_()
 
     def is_outside(self, pos):
-        #
+        """
+
+        :param pos:
+        :return:
+        """
         return (pos.x < 0) | (pos.y < 0) | (pos.x > self.initial_dim.x) | (pos.y > self.initial_dim.y)
 
     def get_intersections_by_line(self, p0, p1):
-        #
-        #
-        #
-        # >>> grid = Grid(10.0, 10.0); grid.get_intersections_by_line(Vec2d(3.0, -2.0), Vec2d(9.0, 15.0))
-        # Out[179]:
-        # [(Vec2d(6.88235294118, 9.0), Vec2d(0, 9.0), Vec2d(9.0, 9.0)),
-        # (Vec2d(3.70588235294, 0.0), Vec2d(9.0, 0), Vec2d(0, 0))
+        """
 
+        :param p0: 1er point appartenant a la ligne d'intersection
+        :param p1: 2nd point appartenant a la ligne d'intersection
+        :return:
+        >>> grid = Grid(10.0, 10.0); grid.get_intersections_by_line(Vec2d(3.0, -2.0), Vec2d(9.0, 15.0))
+         Out[179]:
+         [(Vec2d(6.88235294118, 9.0), Vec2d(0, 9.0), Vec2d(9.0, 9.0)),
+         (Vec2d(3.70588235294, 0.0), Vec2d(9.0, 0), Vec2d(0, 0))
+        """
         list_intersections = [
             getIntersectPoint(p0, p1, p2, p3) for p2, p3 in self.list_borders
         ]
@@ -393,6 +420,12 @@ class Grid(object):
         return filter(func_filter, list_intersections)
 
     def clip_by_line(self, p0, p1):
+        """
+
+        :param p0:
+        :param p1:
+        :return:
+        """
         intersections = self.get_intersections_by_line(p0, p1)
         points_intersections = map(lambda x: x[0], intersections)
         #
