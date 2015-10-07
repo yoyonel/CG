@@ -289,9 +289,9 @@ class SolveBatmanProblem(object):
         xRange, yRange = self.cur_dims        
         print >> sys.stderr, "xRange, yRange: ", xRange, yRange
         
-        if xRange.isUnit():
+        if not yRange.isUnit():
             # ligne verticale, deplacement selon l'axe Y
-            next_x = 0
+            next_x = self.pos.x
             #
             pos = self.pos.y
             cut = self.cut.y
@@ -304,8 +304,24 @@ class SolveBatmanProblem(object):
             self.cut = Vec2d(self.cut.x, next_cut)
             self.cur_dims[1] = next_valid_domain
             
-        elif yRange.isUnit():
-            pass
+        elif not xRange.isUnit():
+            # ligne horizontale, deplacement selon l'axe X
+            next_y = yRange.start
+            
+            if self.pos.y != yRange.start:
+                next_x = self.pos.x
+            else:
+                #
+                pos = self.pos.x
+                cut = self.cut.x
+                valid_domain = self.cur_dims[0]
+                domain = self.init_dims[0]
+                
+                next_pos, next_cut, next_valid_domain = self.compute_for_1d_segment(pos, cut, state, valid_domain, domain)
+                
+                next_x = next_pos
+                self.cut = Vec2d(next_cut, self.cut.y)
+                self.cur_dims[0] = next_valid_domain
         
         next_position = Vec2d(next_x, next_y)
         self.pos = next_position
@@ -315,7 +331,7 @@ class SolveBatmanProblem(object):
         """ """
         next_valid_domain = valid_domain
         if state == 'WARMER':
-            if pos > cut:
+            if pos >= cut:
                 next_valid_domain = Range(domain.clamp(cut+1), valid_domain.end)
             else:
                 next_valid_domain = Range(valid_domain.start, domain.clamp(cut-1))
@@ -329,7 +345,8 @@ class SolveBatmanProblem(object):
     def compute_cut(self, pos, valid_domain):
         """ """
         cut = valid_domain.center()
-        offset_cut = valid_domain.len() // 12
+        #offset_cut = valid_domain.len() // 8
+        offset_cut = 0
         cut +=  (1 if pos > cut else -1) * offset_cut
         return cut
         
@@ -346,6 +363,7 @@ class SolveBatmanProblem(object):
             
             if state == 'SAME':
                 next_pos = cut
+                next_valid_domain = Range(cut, cut)
             else:
                 # maj de la zone d'exploration
                 next_valid_domain = self.compute_next_valid_domain(pos, cut, state, valid_domain, domain)
@@ -355,10 +373,10 @@ class SolveBatmanProblem(object):
                 print >> sys.stderr, "- mid for cutting: ", mid
                 
                 states_values = defaultdict(int, {'WARMER': 1, 'COLDER': -1})
-                #next_pos = domain.clamp(2*mid - pos + int(next_pos == pos) * states_values[state])
                 next_pos = domain.clamp(2*mid - pos)
                 next_pos = domain.clamp(next_pos + (states_values[state] if next_pos == pos else 0))
                 next_cut = (pos + next_pos) * 0.5
+                #url: https://openclassrooms.com/forum/sujet/capturer-une-partie-entiere-avec-python
                 next_pos = domain.clamp(next_pos + bool(next_cut%1))
                 next_cut = (pos + next_pos) * 0.5
         return next_pos, next_cut, next_valid_domain
