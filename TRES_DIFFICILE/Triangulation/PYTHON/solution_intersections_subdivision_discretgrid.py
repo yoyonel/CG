@@ -411,7 +411,7 @@ class Grid:
         #
         # p0: inside grid
         #
-        #>>> grid = Grid(10, 10); grid.clip(grid.center, Vec2d(15, 5))
+        # >>> grid = Grid(10, 10); grid.clip(grid.center, Vec2d(15, 5))
         #((9, 5),)
         #
         list_intersections = [getIntersectPoint(p0, p1, p2, p3) for p2, p3 in self.list_borders]
@@ -438,7 +438,7 @@ class Grid:
         :return:
         """
         #
-        #>>> grid = Grid(10, 10); grid.clip_from_center(Vec2d(15, 5))
+        # >>> grid = Grid(10, 10); grid.clip_from_center(Vec2d(15, 5))
         #(9, 5)
         #
         try:
@@ -490,7 +490,7 @@ class Grid:
         list_intersections = [getIntersectPoint(e0[0], e1[0], self.center, self.center + n_p0p1) for e0, e1 in
                               list_edges_grid if e0[1] * e1[1] < 0]
         list_intersections = [Vec2d(intersection[0]) for intersection in list_intersections if intersection]
-        #print >> sys.stderr, "filter_list_corners: ", filter_list_corners
+        # print >> sys.stderr, "filter_list_corners: ", filter_list_corners
         #print >> sys.stderr, "list_edges_grid: ", list_edges_grid
         #print >> sys.stderr, "list_intersections: ", list_intersections
         self.list_corners = [tuple_corner[0] for tuple_corner in filter_list_corners if tuple_corner[1] >= 0]
@@ -502,11 +502,11 @@ class Grid:
         #
         #print >> sys.stderr, "center:", self.center
 
-    # Auto-generated code below aims at helping you parse
-    # the standard input according to the problem statement.
+        # Auto-generated code below aims at helping you parse
+        # the standard input according to the problem statement.
 
-    # w: width of the building.
-    # h: height of the building.
+        # w: width of the building.
+        # h: height of the building.
 
 
 w, h = [int(i) for i in raw_input().split()]
@@ -536,5 +536,5 @@ while 1:
     # Write an action using print
     # To debug: print >> sys.stderr, "Debug messages..."
 
-    #print "0 0"
+    # print "0 0"
     print "%d %d" % (x_bat, y_bat)
