@@ -56,8 +56,10 @@ class SolverWithAACut:
         :return:
         """
         #
-        self.xRange = Range(1/2, (_w-1)-1/2)
-        self.yRange = Range(1/2, (_h-1)-1/2)
+        #self.xRange = Range(0.5, (_w-1)-0.5)
+        #self.yRange = Range(0.5, (_h-1)-0.5)
+        self.xRange = Range(0, _w - 1)
+        self.yRange = Range(0, _h - 1)
         self.initial_dimensions = (self.xRange, self.yRange)
         #
         self.position = (_x, _y)
@@ -137,21 +139,24 @@ class SolverWithAACut:
         # calcul de la symetrie de central de la position
         # et clamp de la valeur par le range (dimension) initial(e)
         central_symmetry = _init_range.clamp(self.compute_central_symmetry(_position, center))
+        
         # on maj le centre par rapport a cette symetrie
-        center = (_position + central_symmetry) * 0.5
+        #center = (_position + central_symmetry) * 0.5
+        center = (_position + central_symmetry) // 2
 
         #center_on_cell = False
         # est ce que le centre courant choisit est sur une interligne ou une case ?
+        '''
         if not self.position_on_cell(center):
             # si le centre est sur une interligne
             # on voit si on peut le deplacer pour se trouver sur une cellule
             distance_cs_to_end = _range.end - central_symmetry
             if distance_cs_to_end >= 1:
                 # update center et la symetrie centrale
-                center += 1/2
+                center += 0.5
                 central_symmetry += 1
                 #center_on_cell = True
-
+        '''
         # on renvoie les resultats
         #return central_symmetry, center, center_on_cell
         return central_symmetry, center
@@ -178,22 +183,29 @@ class SolverWithAACut:
         # maj des ranges par rapport a la reponse du scanner de Batman
         self.update_ranges(_bomb_dist)
 
-        # on calcul la prochaine position pour effectuer un cut (horizontal ou vertical)
-        if self.xRange.len() > self.yRange.len():
-            results_cut = self.compute_vertical_cut()
-            type_cut = 'VERTICAL'
-            next_position = (results_cut[0], self.position[1])
+        print >> sys.stderr, "-> ", self.xRange.isUnit(), self.yRange.isUnit()
+		# est ce que les ranges sont reduites a l'unite ?
+        if self.xRange.isUnit() & self.yRange.isUnit():
+            print >> sys.stderr, "UNITES pour les ranges!"
+			# si oui, on a la solution du probleme
+            next_position = (self.xRange.start, self.yRange.start)
         else:
-            results_cut = self.compute_horizontal_cut()
-            type_cut = 'HORIZONTAL'
-            next_position = (self.position[0], results_cut[0])
-
-        cut_position = results_cut[1]
-
-        self.last_position = self.position
-        self.position = next_position
-        self.cut_position = cut_position
-        self.type_cut = type_cut
+            # on calcul la prochaine position pour effectuer un cut (horizontal ou vertical)
+            if self.xRange.len() > self.yRange.len():
+                results_cut = self.compute_vertical_cut()
+                type_cut = 'VERTICAL'
+                next_position = (results_cut[0], self.position[1])
+            else:
+                results_cut = self.compute_horizontal_cut()
+                type_cut = 'HORIZONTAL'
+                next_position = (self.position[0], results_cut[0])
+                
+            cut_position = results_cut[1]
+            
+            self.last_position = self.position
+            self.position = next_position
+            self.cut_position = cut_position
+            self.type_cut = type_cut
 
         return next_position
 
@@ -232,5 +244,4 @@ while 1:
     x_bat, y_bat = solver.compute_next_position(bomb_dist)
     print >> sys.stderr, "\nsolver:\n", solver
 
-    #print "0 0"
     print "%d %d" % (x_bat, y_bat)
