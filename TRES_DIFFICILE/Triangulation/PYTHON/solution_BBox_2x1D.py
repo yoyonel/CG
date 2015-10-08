@@ -71,8 +71,8 @@ class SolverWithAACut:
         #
         self.bomb_dist = _bomb_dist
         # ac : analytic coordinates [Analytic_Coordinates]
-        self.ac_cut_position = None
-        self.type_cut = None
+        self.ac_cut_position = 0
+        self.type_cut = ''
 
     def update_ranges(self, _bomb_dist):
         """
@@ -92,29 +92,31 @@ class SolverWithAACut:
                 # une seule ligne nous interesse
                 self.wc_yRange = Range(self.ac_cut_position, self.ac_cut_position)
                 # on passe en recherche unidimensionnelle 1D
-        elif _bomb_dist == 'WARMER':
-            if self.type_cut == 'VERTICAL':
-                if self.wc_position[0] > self.ac_cut_position:
-                    self.wc_xRange.start = self.ac_cut_position + 0.5 * (1 + self.position_on_cell(self.ac_cut_position))
-                else:
-                    self.wc_xRange.end = self.ac_cut_position - 0.5 * (1 + self.position_on_cell(self.ac_cut_position))
-            elif self.type_cut == 'HORIZONTAL':
-                if self.wc_position[1] > self.ac_cut_position:
-                    self.wc_yRange.start = self.ac_cut_position + 0.5 * (1 + self.position_on_cell(self.ac_cut_position))
-                else:
-                    self.wc_yRange.end = self.ac_cut_position - 0.5 * (1 + self.position_on_cell(self.ac_cut_position))
-        elif _bomb_dist == 'COLDER':
-            if self.type_cut == 'VERTICAL':
-                if self.wc_last_position[0] > self.ac_cut_position:
-                    self.wc_xRange.start = self.ac_cut_position + 0.5 * (1 + self.position_on_cell(self.ac_cut_position))
-                else:
-                    self.wc_xRange.end = self.ac_cut_position - 0.5 * (1 + self.position_on_cell(self.ac_cut_position))
-            elif self.type_cut == 'HORIZONTAL':
-                if self.wc_last_position[1] > self.ac_cut_position:
-                    self.wc_yRange.start = self.ac_cut_position + 0.5 * (1 + self.position_on_cell(self.ac_cut_position))
-                else:
-                    self.wc_yRange.end = self.ac_cut_position - 0.5 * (1 + self.position_on_cell(self.ac_cut_position))
-                    # else _bomb_dist == 'UNKNOWN' => rien a faire
+        else:
+            offset = 0.5 * (1 + self.position_on_cell(self.ac_cut_position))
+            if _bomb_dist == 'WARMER':
+                if self.type_cut == 'VERTICAL':
+                    if self.wc_position[0] > self.ac_cut_position:
+                        self.wc_xRange.start = self.ac_cut_position + offset
+                    else:
+                        self.wc_xRange.end = self.ac_cut_position - offset
+                elif self.type_cut == 'HORIZONTAL':
+                    if self.wc_position[1] > self.ac_cut_position:
+                        self.wc_yRange.start = self.ac_cut_position + offset
+                    else:
+                        self.wc_yRange.end = self.ac_cut_position - offset
+            elif _bomb_dist == 'COLDER':
+                if self.type_cut == 'VERTICAL':
+                    if self.wc_last_position[0] > self.ac_cut_position:
+                        self.wc_xRange.start = self.ac_cut_position + offset
+                    else:
+                        self.wc_xRange.end = self.ac_cut_position - offset
+                elif self.type_cut == 'HORIZONTAL':
+                    if self.wc_last_position[1] > self.ac_cut_position:
+                        self.wc_yRange.start = self.ac_cut_position + offset
+                    else:
+                        self.wc_yRange.end = self.ac_cut_position - offset
+                        # else _bomb_dist == 'UNKNOWN' => rien a faire
 
     @staticmethod
     def position_on_cell(_position):
@@ -286,7 +288,7 @@ class SolverWithAACut:
                     self.anch_to_cell(self.wc_xRange.center() + 1, self.wc_initial_dimensions[0]),
                     self.anch_to_cell(self.wc_yRange.center() + 1, self.wc_initial_dimensions[1])
                 )
-                cut_position = None
+                cut_position = 0
             elif eval_v > eval_h:
                 type_cut = 'VERTICAL'
                 next_position = (wc_cs_v, self.wc_position[1])
