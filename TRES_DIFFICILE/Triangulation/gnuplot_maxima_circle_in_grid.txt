@@ -1,0 +1,29 @@
+center_x = 5.5
+center_y = 5.5
+
+fx(angle, radius) = radius*cos(angle) + center_x
+fy(angle, radius) = radius*sin(angle) + center_y
+fract_part(value) = value > 0 ? value - int(value) : int(value) - value
+distance_circle_to_grid(angle, radius) = sqrt( (0.5 - fract_part(fx(angle, radius)))**2 + (0.5 - fract_part(fy(angle, radius)))**2 )
+set parametric
+set trange [0:2*pi]
+set sample 10000
+radius = 5.56787
+plot t, distance_circle_to_grid(t, radius)
+
+fract_part_x_circle_in_grid(angle, radius) = fract_part(fx(angle, radius))
+fract_part_y_circle_in_grid(angle, radius) = fract_part(fy(angle, radius))
+plot t, fract_part_x_circle_in_grid(t, radius)
+
+#set urange [0:2*pi]
+#set vrange [1.0:10.0]
+#splot u, v, distance_circle_to_grid(u, v)
+
+
+center_x:5.5; center_y:5.5;
+fx(angle, radius) := radius*cos(angle) + center_x;
+fy(angle, radius) := radius*sin(angle) + center_y;
+fract_part(value) := floor(value);
+distance_circle_to_grid(angle, radius) := sqrt( (0.5 - fract_part(fx(angle, radius)))**2 + (0.5 - fract_part(fy(angle, radius)))**2 );
+
+sqrt((0.5 - radius*cos(angle) + center_x - entier(radius*cos(angle) + center_x))**2 + (0.5 - radius*sin(angle) + center_y - entier(radius*sin(angle) + center_y))**2);

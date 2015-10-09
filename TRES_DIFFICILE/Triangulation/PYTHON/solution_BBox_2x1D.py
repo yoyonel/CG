@@ -2,6 +2,7 @@ import math
 import operator
 import sys
 from collections import defaultdict
+import random
 
 
 # url: http://stackoverflow.com/questions/18516299/finding-a-list-of-all-largest-open-rectangles-in-a-grid-by-only-examining-a-list
@@ -73,6 +74,8 @@ class SolverWithAACut:
         # ac : analytic coordinates [Analytic_Coordinates]
         self.ac_cut_position = 0
         self.type_cut = ''
+        #
+        self.nb_times_outside = 0
 
     def update_ranges(self, _bomb_dist):
         """
@@ -117,6 +120,11 @@ class SolverWithAACut:
                     else:
                         self.wc_yRange.end = self.ac_cut_position - offset
                         # else _bomb_dist == 'UNKNOWN' => rien a faire
+
+        if self.wc_xRange.inside(self.wc_position[0]) & self.wc_yRange.inside(self.wc_position[1]):
+            self.nb_times_outside = 0
+        else:
+            self.nb_times_outside += 1
 
     @staticmethod
     def position_on_cell(_position):
@@ -281,14 +289,18 @@ class SolverWithAACut:
 
             # cut VERTICAL ou HORIZONTAL a evaluations nulles
             # on se repositionne (vers le centre) a defaut de couper dans le vent !
-            if (eval_h == 0) & (eval_v == 0):
+            if ((eval_h == 0) & (eval_v == 0)) | (self.nb_times_outside >= 3):
                 type_cut = 'NO_CUT'
-                # TODO: on galere avec les coordonnees sur le centre, faudrait resoudre ce cas ...
+                # note : coef = 1/6 un peu mystique ... doit avoir un truc de proba la dessus
+                coef_scale_offset = 1.0 / 6.0 * 0.0
+                offset_x = max(1, self.wc_xRange.len() * coef_scale_offset)
+                offset_y = max(1, self.wc_yRange.len() * coef_scale_offset)
                 next_position = (
-                    self.anch_to_cell(self.wc_xRange.center() + 1, self.wc_initial_dimensions[0]),
-                    self.anch_to_cell(self.wc_yRange.center() + 1, self.wc_initial_dimensions[1])
+                    self.anch_to_cell(self.wc_xRange.center() + offset_x, self.wc_initial_dimensions[0]),
+                    self.anch_to_cell(self.wc_yRange.center() + offset_y, self.wc_initial_dimensions[1])
                 )
                 cut_position = 0
+                self.nb_times_outside = 0
             elif eval_v > eval_h:
                 type_cut = 'VERTICAL'
                 next_position = (wc_cs_v, self.wc_position[1])
@@ -308,13 +320,14 @@ class SolverWithAACut:
     # String representaion (for debugging)
     def __repr__(self):
         return '[WC] Ranges: %s - %s\n[WC] last_position: %s\n[WC] position: %s\n' \
-               '[AC] cut_position: %s\ntype_cut: %s\nbomb_dist: %s\n' % (
+               '[AC] cut_position: %s\ntype_cut: %s\nbomb_dist: %s\nnb_times_outside: %s' % (
                    self.wc_xRange, self.wc_yRange,
                    self.wc_last_position,
                    self.wc_position,
                    self.ac_cut_position,
                    self.type_cut,
-                   self.bomb_dist
+                   self.bomb_dist,
+                   self.nb_times_outside
         )
 
 # Auto-generated code below aims at helping you parse
