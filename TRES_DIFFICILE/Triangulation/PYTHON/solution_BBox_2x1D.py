@@ -291,7 +291,7 @@ class SolverWithAACut:
             # on se repositionne (vers le centre) a defaut de couper dans le vent !
             if ((eval_h == 0) & (eval_v == 0)) | (self.nb_times_outside >= 3):
                 type_cut = 'NO_CUT'
-                # note : coef = 1/6 un peu mystique ... doit avoir un truc de proba la dessus
+                # note : coef = 1/6 un peu mystique ... doit avoir un truc de proba la dessous
                 coef_scale_offset = 1.0 / 6.0 * 0.0
                 offset_x = max(1, self.wc_xRange.len() * coef_scale_offset)
                 offset_y = max(1, self.wc_yRange.len() * coef_scale_offset)
