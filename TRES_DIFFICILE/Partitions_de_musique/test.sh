@@ -5,8 +5,16 @@ RUNNER=python
 SCRIPT=PYTHON/solution.py
 TMP_FILE=.test_diff
 
-# Input files detected in the current directory
-files=`find . -regex "\./in[0-9]+\.txt"`
+if [ "$#" -eq  "0" ]
+   then
+   # Input files detected in the current directory
+    files=`find . -regex "\./in[0-9]+\.txt"`
+else
+    #echo "argument:" $1
+    files=($1)
+fi
+
+#echo "files:" $files
 
 for input_file in $files ; do
   # Extract the index from input_file
@@ -32,4 +40,3 @@ for input_file in $files ; do
     echo "failure ($output_file is missing)"
   fi
 done
-
