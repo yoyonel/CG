@@ -3,6 +3,7 @@
 # Configuration variables
 RUNNER=python
 SCRIPT=PYTHON/solution.py
+#SCRIPT=PYTHON/solution_2.py
 TMP_FILE=.test_diff
 
 if [ "$#" -eq  "0" ]
