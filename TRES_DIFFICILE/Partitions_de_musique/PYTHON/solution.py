@@ -92,7 +92,7 @@ sum_column_pixels_for_lines = sum(nb_pixels_for_lines)
 # on recupere la taille (en pixels) d'un bloc definissant une ligne de portee
 size_in_pixels_for_line = nb_pixels_for_lines[0]
 # print >> sys.stderr, "sum_column_pixels_for_lines: ", sum_column_pixels_for_lines
-#print >> sys.stderr, "size_in_pixels_for_line: ", size_in_pixels_for_line
+# print >> sys.stderr, "size_in_pixels_for_line: ", size_in_pixels_for_line
 
 size_interlines = (indices_row_for_lines[1] - indices_row_for_lines[0])
 indices_row_for_lines = [indices_row_for_lines[0] - size_interlines] + indices_row_for_lines
@@ -130,11 +130,11 @@ for nbPixelsForThisBlock in decodeDWE[1::2]:
 #for indice_col in range(w):
 #    counterForColumns[indice_col] = sum(np_img[:, indice_col])
 
-#
+# c
 # (2) on repere les notes
 #
 columns_for_lines = [counter == sum_column_pixels_for_lines for counter in counterForColumns]
-print >> sys.stderr, "columns_for_lines: ", columns_for_lines
+# print >> sys.stderr, "columns_for_lines: ", columns_for_lines
 # ########################################################
 # Version recherche explicite de frontieres + enumerate #
 #########################################################
@@ -166,25 +166,23 @@ print >> sys.stderr, "end_indices_col_for_notes: ", end_indices_col_for_notes
 # ##################
 # Version groupby #
 ###################
-gp_columns_for_lines = itertools.groupby(columns_for_lines)
-#
-ind_col = 0
 start_indices_col_for_notes = []
 end_indices_col_for_notes = []
-for k, len_g in [(k, len(tuple(g))) for k, g in gp_columns_for_lines]:
-    if k:
+ind_col = indice_column_for_staff
+for k, len_g in [(k, len(tuple(g))) for k, g in itertools.groupby(columns_for_lines[indice_column_for_staff:])]:
+    if k:  # <=> 'False' -> 'True'
         end_indices_col_for_notes += [ind_col - 1]
-    else:
+    else:  # <=> 'True' -> 'False'
         start_indices_col_for_notes += [ind_col]
     ind_col += len_g
-start_indices_col_for_notes = start_indices_col_for_notes[1:-1]
+start_indices_col_for_notes = start_indices_col_for_notes[:-1]
 end_indices_col_for_notes = end_indices_col_for_notes[1:]
 #print >> sys.stderr, "start_indices_col_for_notes: ", start_indices_col_for_notes
 #print >> sys.stderr, "end_indices_col_for_notes: ", end_indices_col_for_notes
 
-# tup indices de depart et fin de colonnes definissant la note sur la partition
+# tup indices de     depart et fin de colonnes definissant la note sur la partition
 notes_on_sheet = zip(start_indices_col_for_notes, end_indices_col_for_notes)
-print >> sys.stderr, "notes_on_sheet: ", notes_on_sheet
+#print >> sys.stderr, "notes_on_sheet: ", notes_on_sheet
 
 len_cols_for_notes_on_sheet = [e - s for s, e in notes_on_sheet]
 print >> sys.stderr, "len_cols_for_notes_on_sheet: ", len_cols_for_notes_on_sheet
