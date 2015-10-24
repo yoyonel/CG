@@ -2,7 +2,7 @@
 
 # Configuration variables
 RUNNER=python
-SCRIPT=PYTHON/solution.py
+SCRIPT=parser.py
 #SCRIPT=PYTHON/solution_2.py
 TMP_FILE=.test_diff
 
@@ -11,7 +11,7 @@ if [ "$#" -eq  "0" ]
    # Input files detected in the current directory
     files=`find . -regex "\./in[0-9]+\.txt"`
 else
-    #echo "argument:" $1
+    echo "argument:" $1
     files=($1)
 fi
 
