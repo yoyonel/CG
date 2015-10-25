@@ -143,10 +143,8 @@ func main() {
 						// if no new direction available go back to the center
 						destination = center_board
 					}
-					pos = destination
-				} else {
-					pos = destination
-				}
+				} 
+				pos = destination
 			}
 		}
 		
