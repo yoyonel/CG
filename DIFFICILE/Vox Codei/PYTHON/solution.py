@@ -420,18 +420,19 @@ def compute_best_position_for_bomb(solver):
         for _row, _col in list_connectivities[value]:
             # on recupere la position de cellule libre la plus rentable en terme d'explosion
             print >> sys.stderr, "value: %d -> coord cell: (%d, %d): " % (value, _row, _col)
-
             # On cree une copie du solver pour effectuer un test de validite du prochain mouvement
             solver_2 = copy.deepcopy(solver)
             print >> sys.stderr, "%s %s" % (hex(id(solver)), hex(id(solver_2)))
             solver_2.set_bomb_fork(_row, _col)
             solver_2.update_max_connectivity_for_nodes()
-            #nb_ca_with_c1_after_explosion = len(filter(lambda v: v == 1, solver_2.map_max_connectivity.values()))
             nb_ca_with_c1_after_explosion = len(solver_2.map_max_connectivities[1])
             print >> sys.stderr, "nombre de ca avec connectivite 1 (apres explosion): ", nb_ca_with_c1_after_explosion
+			# on break des qu'on trouve une explosion qui conserve au moins le meme nombre de node avec une connectivite 1
+			# qu'avant l'explosion (on aura au moins detruit des nodes dans l'operation (sans creer plus d'ilot de node))
             if nb_ca_with_c1_after_explosion <= nb_ca_with_c1_before_explosion:
                 break
         print >> sys.stderr, ""
+		# break des qu'on a une solution viable pour notre optimisation
         if nb_ca_with_c1_after_explosion <= nb_ca_with_c1_before_explosion:
             break
 
@@ -453,8 +454,9 @@ def compute_next_move(solver, _state):
             if solver.bombs == 1:
                 # il ne reste qu'une bombe
                 # on test pour voir si en attendant on a pas un meilleur coup possible
+				# c'est sous optimal et utile que dans le dernier test: 'Prevoir mieux le futur'
                 solver_2 = copy.deepcopy(solver)
-                solver_2.update(rounds - 3, bombs)
+                solver_2.update(rounds - 3, bombs)	# on 'avance' dans le temps
                 solver_2.update_list_cells_availables()
                 row2, col2, value2 = compute_best_position_for_bomb(solver_2)
                 print >> sys.stderr, "row2, col2, value2: ", row2, col2, value2
@@ -470,6 +472,22 @@ def compute_next_move(solver, _state):
         return 'WAIT', 1
 
 
+def wait_unitil_best_position_available(solver, next_action):
+	"""
+	
+	"""
+	# si state == 1 => le solver estime qu'il est plus rentable d'attendre l'explosion des bombes en cours
+	row, col = next_action
+	print >> sys.stderr, "grid.rows_tiles[row][col]: ", grid.rows_tiles[row][col]
+	# on 'wait' jusqu'a que la position estimee la plus rentable soit disponible sur le plateau de jeu
+	while grid.rows_tiles[row][col] == 'T':
+		print 'WAIT'
+		rounds, bombs = [int(i) for i in raw_input().split()]
+		grid.update(rounds, bombs)
+	# on place alors la bombe 
+	grid.set_bomb_fork(row, col)
+	
+	
 # Auto-generated code below aims at helping you parse
 # the standard input according to the problem statement.
 
@@ -502,14 +520,8 @@ while 1:
 
     if next_action == 'WAIT':
         print 'WAIT'
-    elif state == 1:
-        row, col = next_action
-        print >> sys.stderr, "grid.rows_tiles[row][col]: ", grid.rows_tiles[row][col]
-        while grid.rows_tiles[row][col] == 'T':
-            print 'WAIT'
-            rounds, bombs = [int(i) for i in raw_input().split()]
-            grid.update(rounds, bombs)
-        print "%d %d" % (col, row)
-        state = 0
     else:
+        if state == 1:
+	        wait_unitil_best_position_available(grid, next_action)
+	        state = 0
         print "%d %d" % (next_action[1], next_action[0])
