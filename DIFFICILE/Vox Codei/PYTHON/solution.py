@@ -4,6 +4,16 @@ from collections import defaultdict
 import copy
 
 
+class Enum(set):
+    def __getattr__(self, name):
+        if name in self:
+            return name
+        raise AttributeError
+
+
+State = Enum(["NORMAL", "WAITING"])
+
+
 class GridForVoxCodei(object):
     """
 
@@ -427,67 +437,67 @@ def compute_best_position_for_bomb(solver):
             solver_2.update_max_connectivity_for_nodes()
             nb_ca_with_c1_after_explosion = len(solver_2.map_max_connectivities[1])
             print >> sys.stderr, "nombre de ca avec connectivite 1 (apres explosion): ", nb_ca_with_c1_after_explosion
-			# on break des qu'on trouve une explosion qui conserve au moins le meme nombre de node avec une connectivite 1
-			# qu'avant l'explosion (on aura au moins detruit des nodes dans l'operation (sans creer plus d'ilot de node))
+            # on break des qu'on trouve une explosion qui conserve au moins le meme nombre de node avec une connectivite 1
+            # qu'avant l'explosion (on aura au moins detruit des nodes dans l'operation (sans creer plus d'ilot de node))
             if nb_ca_with_c1_after_explosion <= nb_ca_with_c1_before_explosion:
                 break
         print >> sys.stderr, ""
-		# break des qu'on a une solution viable pour notre optimisation
+        # break des qu'on a une solution viable pour notre optimisation
         if nb_ca_with_c1_after_explosion <= nb_ca_with_c1_before_explosion:
             break
 
     return _row, _col, value
 
 
-def compute_next_move(solver, _state):
+def compute_next_move(_solver, _state):
     """
 
-    :param solver:
+    :param _solver:
     :return:
     """
-    if _state == 0:
-        if bool(solver.bombs) & bool(solver.list_available_cells):
+    if _state == State.NORMAL:
+        if bool(_solver.bombs) & bool(_solver.list_available_cells):
             # calcul de la 'meilleur' position pour placer une bombe au prochain tour
-            _row, _col, value = compute_best_position_for_bomb(solver)
+            _row, _col, value = compute_best_position_for_bomb(_solver)
             print >> sys.stderr, "row, col, value: ", _row, _col, value
 
-            if solver.bombs == 1:
+            if _solver.bombs == 1:
                 # il ne reste qu'une bombe
                 # on test pour voir si en attendant on a pas un meilleur coup possible
-				# c'est sous optimal et utile que dans le dernier test: 'Prevoir mieux le futur'
-                solver_2 = copy.deepcopy(solver)
-                solver_2.update(rounds - 3, bombs)	# on 'avance' dans le temps
+                # c'est sous optimal et utile que dans le dernier test: 'Prevoir mieux le futur'
+                solver_2 = copy.deepcopy(_solver)
+                solver_2.update(rounds - 3, bombs)  # on 'avance' dans le temps
                 solver_2.update_list_cells_availables()
                 row2, col2, value2 = compute_best_position_for_bomb(solver_2)
                 print >> sys.stderr, "row2, col2, value2: ", row2, col2, value2
                 if value2 > value:
-                    return (row2, col2), 1
+                    return (row2, col2), State.WAITING
 
-            solver.set_bomb_fork(_row, _col)
+            _solver.set_bomb_fork(_row, _col)
 
-            return (_row, _col), 0
+            return (_row, _col), State.NORMAL
         else:
-            return 'WAIT', 0
+            return 'WAIT', State.NORMAL
     elif _state == 1:
-        return 'WAIT', 1
+        return 'WAIT', State.WAITING
 
 
-def wait_unitil_best_position_available(solver, next_action):
-	"""
-	
-	"""
-	# si state == 1 => le solver estime qu'il est plus rentable d'attendre l'explosion des bombes en cours
-	row, col = next_action
-	print >> sys.stderr, "grid.rows_tiles[row][col]: ", grid.rows_tiles[row][col]
-	# on 'wait' jusqu'a que la position estimee la plus rentable soit disponible sur le plateau de jeu
-	while grid.rows_tiles[row][col] == 'T':
-		print 'WAIT'
-		rounds, bombs = [int(i) for i in raw_input().split()]
-		grid.update(rounds, bombs)
-	# on place alors la bombe 
-	grid.set_bomb_fork(row, col)
-	
-	
+def wait_unitil_best_position_available(_solver, _next_action):
+    """
+
+    """
+    # si state == 1 => le solver estime qu'il est plus rentable d'attendre l'explosion des bombes en cours
+    row, col = _next_action
+    print >> sys.stderr, "grid.rows_tiles[row][col]: ", _solver.rows_tiles[row][col]
+    # on 'wait' jusqu'a que la position estimee la plus rentable soit disponible sur le plateau de jeu
+    while _solver.rows_tiles[row][col] == 'T':
+        print 'WAIT'
+        rounds, bombs = [int(i) for i in raw_input().split()]
+        grid.update(rounds, bombs)
+    # on place alors la bombe
+    grid.set_bomb_fork(row, col)
+
+
 # Auto-generated code below aims at helping you parse
 # the standard input according to the problem statement.
 
@@ -503,7 +513,8 @@ for i in xrange(height):
 grid.update_influences_of_nodes()
 grid.update_list_cells_availables()
 
-state = 0
+state = State.NORMAL
+next_action = None
 # game loop
 while 1:
     # rounds: number of rounds left before the end of the game
@@ -514,14 +525,13 @@ while 1:
     # Write an action using print
     # To debug: print >> sys.stderr, "Debug messages..."
 
-    # next_action = grid.next_action()
     next_action, state = compute_next_move(grid, state)
     print >> sys.stderr, "next_action, state: ", next_action, state
 
     if next_action == 'WAIT':
         print 'WAIT'
     else:
-        if state == 1:
-	        wait_unitil_best_position_available(grid, next_action)
-	        state = 0
+        if state == State.WAITING:
+            wait_unitil_best_position_available(grid, next_action)
+            state = State.NORMAL
         print "%d %d" % (next_action[1], next_action[0])
