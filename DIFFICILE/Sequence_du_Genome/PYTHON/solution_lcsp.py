@@ -7,7 +7,7 @@ from itertools import combinations
 # url: https://en.wikipedia.org/wiki/Longest_common_substring_problem
 # url: https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Longest_common_substring#Python2
 def longest_common_substring(s1, s2):
-    m = [[0] * (1 + len(s2)) for i in xrange(1 + len(s1))]
+    m = [[0] * (1 + len(s2)) for _ in xrange(1 + len(s1))]
     longest, x_longest = 0, 0
     for x in xrange(1, 1 + len(s1)):
         for y in xrange(1, 1 + len(s2)):
@@ -33,6 +33,76 @@ def compute_combinaisons_for_longest_common_substrings(list_strings):
         if longest:
             list_results.append((id0, id1, substr, s1_start, longest))
     return list_results
+
+
+def unflat_list_of_list(ll):
+    """
+
+    :param ll:
+    :return:
+    """
+    return [item for sublist in ll for item in sublist]
+
+
+def compute_matrix_common_substring(s1, s2):
+    """
+
+    :param s1:
+    :param s2:
+    :return: On utilise l'algo dynamique de 'Longest Common Substring' pour recuperer les prefixes/suffixes qui nous
+    interessent
+    """
+    m = [[(0, 0, 0)] * (1 + len(s2)) for _ in xrange(1 + len(s1))]
+
+    for x in xrange(1, 1 + len(s1)):
+        for y in xrange(1, 1 + len(s2)):
+            m[x][y] = (x, y, m[x - 1][y - 1][2] + 1 if s1[x - 1] == s2[y - 1] else 0)
+    return m
+
+
+def longest_prefix_suffix_common_substring(s1, s2):
+    """
+
+    :param s1:
+    :param s2:
+    :return: On utilise l'algo dynamique de 'Longest Common Substring' pour recuperer les prefixes/suffixes qui nous
+    interessent
+    """
+    m = unflat_list_of_list(compute_matrix_common_substring(s1, s2))
+    longest_prefix = max(m, key=lambda tup: ((tup[1] == tup[2]) & (tup[0] == len(s1))) * tup[2])
+    longest_suffix = max(m, key=lambda tup: ((tup[0] == tup[2]) & (tup[1] == len(s2))) * tup[2])
+    return longest_prefix, longest_suffix
+
+
+def compute_combinaisons_for_longest_prefix_suffix_substrings(list_strings):
+    """
+
+    :param list_strings:
+    :return:
+    """
+    list_results = []
+    for id0, id1 in combinations(range(len(list_strings)), 2):
+        longest_prefix, longest_suffix = longest_prefix_suffix_common_substring(list_strings[id0], list_strings[id1])
+        list_results.append((id0, id1, longest_prefix, longest_suffix))
+    return list_results
+
+
+def compute_fusion_with_prefix_suffix_common(s1, s2):
+    """
+
+    :param s1:
+    :param s2:
+    :return:
+    """
+    longest_prefix, longest_suffix = longest_prefix_suffix_common_substring(s1, s2)
+    #
+    i1, i2, lp = longest_prefix
+    fusion_prefix = s1[:i1 - lp] + s1[i1 - lp:i1] + s2[i2:] if lp else ''
+    #
+    i1, i2, lp = longest_suffix
+    fusion_suffix = s2[:i2 - lp] + s2[i2 - lp:i2] + s1[i1:] if lp else ''
+    #
+    return fusion_prefix, fusion_suffix
 
 
 # url: http://stackoverflow.com/questions/11263172/what-is-the-pythonic-way-to-find-the-longest-common-prefix-of-a-list-of-lists
@@ -95,7 +165,7 @@ def find_all(a_str, sub):
         if start == -1:
             return
         yield start
-        #start += len(sub) # use start += 1 to find overlapping matches
+        # start += len(sub) # use start += 1 to find overlapping matches
         start += 1
 
 
@@ -120,7 +190,7 @@ def find_longest_suffix_prefix_common(s1, s2):
         if len(l) <= 1:
             break
         i1 -= 1
-    #print l
+    # print l
     #print i1
     if len(l):
         i2 = l[0]
