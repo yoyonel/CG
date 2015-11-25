@@ -16,15 +16,31 @@ def compute_matrix_common_substring(s1, s2):
 
     :param s1:
     :param s2:
-    :return: On utilise l'algo dynamique de 'Longest Common Substring' pour recuperer les prefixes/suffixes qui nous
-    interessent
+    :return: On utilise l'algo dynamique de 'Longest Common Substring'
+             pour recuperer les prefixes/suffixes qui nous interessent
     """
     m = [[(0, 0, 0)] * (1 + len(s2)) for _ in xrange(1 + len(s1))]
 
     for x in xrange(1, 1 + len(s1)):
         for y in xrange(1, 1 + len(s2)):
-            m[x][y] = (x, y, m[x - 1][y - 1][2] + 1 if s1[x - 1] == s2[y - 1] else 0)
+            m[x][y] = (
+                x, y, m[x - 1][y - 1][2] + 1
+                if s1[x - 1] == s2[y - 1]
+                else 0
+                )
     return m
+
+
+def is_prefix(tup, l_s2):
+    """
+    """
+    return (tup[0] == tup[2]) & (tup[1] == l_s2)
+
+
+def is_suffix(tup, l_s1):
+    """
+    """
+    return (tup[1] == tup[2]) & (tup[0] == l_s1)
 
 
 def longest_prefix_common_substring(s1, s2):
@@ -34,8 +50,21 @@ def longest_prefix_common_substring(s1, s2):
     :param s2:
     :return:
     """
-    m = unflat_list_of_list(compute_matrix_common_substring(s1, s2))
-    return max(m, key=lambda tup: ((tup[1] == tup[2]) & (tup[0] == len(s1))) * tup[2])
+    mat = compute_matrix_common_substring(s1, s2)
+    l_mat = unflat_list_of_list(mat)
+    return max(
+        l_mat,
+        key=lambda tup: is_prefix(tup, len(s2)) * tup[2]
+        )
+
+
+def llpcs(s1, s2):
+    """
+    :param s1:
+    :param s2:
+    :return: length of the longest prefix in common substring
+    """
+    return longest_prefix_common_substring(s1, s2)[2]
 
 
 def filter_inclusions(list_strings):
@@ -66,7 +95,10 @@ def filter_inclusions(list_strings):
             for i_s, s in enumerate(list_strings)
         ]
     ]
-    return map(itemgetter(0), filter(itemgetter(1), zip(list_strings, list_inclusions)))
+    return map(
+        itemgetter(0),
+        filter(itemgetter(1), zip(list_strings, list_inclusions))
+        )
 
 
 def solver(list_strings):
@@ -92,18 +124,22 @@ def solver(list_strings):
     """
     list_strings = filter_inclusions(list_strings)
 
+    # somme des longueurs des strings
+    # => pire des cas: aucunes strings ne peuvent se 'fusionner'
     sum_lengths_strings = sum(len(s) for s in list_strings)
 
     optimize_char_in_prefix_common = 0
-    if len(list_strings) > 1:
+    nb_strings_in_list = len(list_strings)
+    if nb_strings_in_list > 1:
         optimize_char_in_prefix_common = max(
             [
                 sum(
                     map(
-                        lambda tup: longest_prefix_common_substring(list_strings[tup[0]], list_strings[tup[1]])[2],
-                        zip(list_indices[:-1], list_indices[1:]))
+                        lambda zip_result: llpcs(list_strings[zip_result[0]], list_strings[zip_result[1]]),
+                        zip(list_indices[:-1], list_indices[1:])
+                        )
                 )
-                for list_indices in permutations(xrange(len(list_strings)), len(list_strings))
+                for list_indices in permutations(xrange(nb_strings_in_list), nb_strings_in_list)
             ]
         )
     return sum_lengths_strings - optimize_char_in_prefix_common
@@ -145,6 +181,9 @@ def longest_prefix(s1, s2):
 
 def solver_simple(list_strings):
     """
+        methodes utilisees:
+        - filter_substrings
+        - longest_prefix
     """
     list_strings = filter_substrings(list_strings)
 
@@ -175,5 +214,5 @@ for i in xrange(n):
     #
     list_seqs.append(subseq)
 
-# print solver(list_seqs)
-print solver_simple(list_seqs)
+print solver(list_seqs)
+#print solver_simple(list_seqs)

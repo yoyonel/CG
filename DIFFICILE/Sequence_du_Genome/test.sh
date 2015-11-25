@@ -9,12 +9,13 @@ SCRIPT=PYTHON/solution_light.py
 TMP_FILE=.test_diff
 
 if [ "$#" -eq  "0" ]
-   then
+ then
    # Input files detected in the current directory
-    files=`find . -regex "\./in[0-9]+\.txt"`
-else
-    echo "argument:" $1
-    files="./in$1.txt"
+   # sort the list => http://stackoverflow.com/a/7992921
+   files=`find . -regex "\./in[0-9]+\.txt" | sort -V` 
+ else
+  echo "argument:" $1
+  files="./in$1.txt"
 fi
 
 #echo "files:" $files
