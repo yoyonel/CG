@@ -27,7 +27,7 @@ def compute_matrix_common_substring(s1, s2):
                 x, y, m[x - 1][y - 1][2] + 1
                 if s1[x - 1] == s2[y - 1]
                 else 0
-                )
+            )
     return m
 
 
@@ -55,7 +55,7 @@ def lpcs(s1, s2):
     tup_max = max(
         l_mat,
         key=lambda tup: is_prefix(tup, len(s2)) * tup[2]
-        )
+    )
     return tup_max[2]
 
 
@@ -90,16 +90,17 @@ def filter_inclusions(list_strings):
     return map(
         itemgetter(0),
         filter(itemgetter(1), zip(list_strings, list_inclusions))
-        )
+    )
 
 
 def sum_of_concat_prefix(l_str, li):
     """
     """
     return sum(
-        map(lambda l_2i: lpcs(l_str[l_2i[0]], l_str[l_2i[1]]),
+        map(
+            lambda l_2i: lpcs(l_str[l_2i[0]], l_str[l_2i[1]]),
             zip(li[:-1], li[1:])
-            )
+        )
     )
 
 
